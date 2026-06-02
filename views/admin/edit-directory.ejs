@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Directory</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Jost:wght@500;600;700&display=swap');
+
+    body { margin: 0; background: #f4f6f8; font-family: "DM Sans", sans-serif; color: #111827; }
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { width: 250px; background: #101820; color: white; position: fixed; inset: 0 auto 0 0; }
+    .brand { padding: 22px; font-family: Jost, sans-serif; font-size: 22px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .menu { padding: 15px; }
+    .menu a { display: block; color: #dfe6ee; text-decoration: none; padding: 13px 14px; border-radius: 8px; margin-bottom: 6px; font-weight: 500; }
+    .menu a:hover, .menu a.active { background: #BF1E2D; color: white; }
+
+    .main { margin-left: 250px; width: calc(100% - 250px); }
+    .topbar { height: 68px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 28px; }
+    .topbar h1 { font-family: Jost, sans-serif; margin: 0; font-size: 24px; }
+
+    .content { padding: 28px; }
+    .card { max-width: 900px; background: white; border-radius: 14px; padding: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.05); }
+    h2 { font-family: Jost, sans-serif; margin-top: 0; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 18px;
+      row-gap: 28px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ddd;
+      border-radius: 9px;
+      margin-bottom: 0;
+      font-family: "DM Sans", sans-serif;
+      background: white;
+    }
+
+    button {
+      background: #BF1E2D;
+      color: white;
+      border: 0;
+      padding: 13px 22px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .note {
+      background: #f9fafb;
+      border-left: 4px solid #37B649;
+      padding: 13px 14px;
+      border-radius: 8px;
+      margin-bottom: 22px;
+      color: #4b5563;
+    }
+
+    .section-title {
+      font-family: Jost, sans-serif;
+      margin: 28px 0 14px;
+      padding-top: 18px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .current-logo {
+      width: 150px;
+      height: 80px;
+      object-fit: contain;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 8px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <%- include("partials/sidebar") %>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>Edit Directory</h1>
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <h2>Edit Business Directory</h2>
+
+        <div class="note">
+          Update the business details below. Upload a new logo only if you want to replace the old one.
+        </div>
+
+        <form method="POST" action="/admin/directories/edit/<%= directory.id %>" enctype="multipart/form-data">
+
+          <input type="hidden" name="old_logo" value="<%= directory.logo_image || '' %>">
+
+          <div class="grid">
+            <div>
+              <label>Business Name</label>
+              <input type="text" name="business_name" value="<%= directory.business_name %>" required>
+            </div>
+
+            <div>
+              <label>Business Location</label>
+              <input type="text" name="business_location" value="<%= directory.business_location %>" required>
+            </div>
+
+            <div>
+              <label>Business Type</label>
+              <select name="business_type_id" required>
+                <option value="">Select Business Type</option>
+
+                <% types.forEach(function(type) { %>
+                  <option value="<%= type.id %>" <%= directory.business_type_id == type.id ? "selected" : "" %>>
+                    <%= type.name %>
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div>
+              <label>Business Category</label>
+              <select name="business_category_id" required>
+                <option value="">Select Business Category</option>
+
+                <% categories.forEach(function(category) { %>
+                  <option value="<%= category.id %>" <%= directory.business_category_id == category.id ? "selected" : "" %>>
+                    <%= category.name %>
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div>
+              <label>Founder Name</label>
+              <input type="text" name="founder_name" value="<%= directory.founder_name || '' %>">
+            </div>
+
+            <div>
+              <label>Established Year</label>
+              <input type="number" name="established_year" value="<%= directory.established_year || '' %>" min="1800" max="2100">
+            </div>
+
+            <div>
+              <label>Rating</label>
+              <input type="number" name="rating" value="<%= directory.rating || 0 %>" min="0" max="5" step="0.1">
+            </div>
+
+            <div>
+              <label>Reviews Count</label>
+              <input type="number" name="review_count" value="<%= directory.review_count || 0 %>" min="0">
+            </div>
+
+            <div>
+              <label>Verified Business</label>
+              <select name="is_verified">
+                <option value="1" <%= directory.is_verified != 0 ? "selected" : "" %>>Verified</option>
+                <option value="0" <%= directory.is_verified == 0 ? "selected" : "" %>>Not Verified</option>
+              </select>
+            </div>
+
+            <div style="grid-column: 1 / -1;">
+              <label>Business Description</label>
+              <textarea name="description" rows="4"><%= directory.description || '' %></textarea>
+            </div>
+
+            <div>
+              <label>Business Logo</label>
+              <input type="file" name="logo_image" accept="image/*">
+
+              <% if (directory.logo_image) { %>
+                <img class="current-logo" src="/uploads/logos/<%= directory.logo_image %>">
+              <% } %>
+            </div>
+          </div>
+
+          <% if (filterFields.length > 0) { %>
+            <div class="section-title">Extra Directory Fields</div>
+
+            <div class="grid">
+              <% filterFields.forEach(function(field) { %>
+                <div>
+                  <label><%= field.name %></label>
+
+                  <select name="filters[<%= field.id %>]">
+                    <option value="">Select <%= field.name %></option>
+
+                    <% field.values.forEach(function(item) { %>
+                      <option value="<%= item.id %>" <%= selectedMap[field.id] == item.id ? "selected" : "" %>>
+                        <%= item.value %>
+                      </option>
+                    <% }) %>
+                  </select>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+
+          <div class="section-title">Publishing Options</div>
+
+          <label>Schedule Date & Time</label>
+          <input 
+            type="datetime-local" 
+            name="scheduled_at" 
+            value="<%= directory.scheduled_at ? directory.scheduled_at.replace(' ', 'T').slice(0,16) : '' %>"
+          >
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:18px;">
+            <button type="submit" name="save_action" value="publish">Update & Publish</button>
+            <button type="submit" name="save_action" value="draft" style="background:#101820;">Save as Draft</button>
+            <button type="submit" name="save_action" value="schedule" style="background:#37B649;">Schedule</button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

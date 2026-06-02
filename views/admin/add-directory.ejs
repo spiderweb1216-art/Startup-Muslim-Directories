@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Directory</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Jost:wght@500;600;700&display=swap');
+
+    body { margin: 0; background: #f4f6f8; font-family: "DM Sans", sans-serif; color: #111827; }
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { width: 250px; background: #101820; color: white; position: fixed; inset: 0 auto 0 0; }
+    .brand { padding: 22px; font-family: Jost, sans-serif; font-size: 22px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .menu { padding: 15px; }
+    .menu a { display: block; color: #dfe6ee; text-decoration: none; padding: 13px 14px; border-radius: 8px; margin-bottom: 6px; font-weight: 500; }
+    .menu a:hover, .menu a.active { background: #BF1E2D; color: white; }
+
+    .main { margin-left: 250px; width: calc(100% - 250px); }
+    .topbar { height: 68px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 28px; }
+    .topbar h1 { font-family: Jost, sans-serif; margin: 0; font-size: 24px; }
+
+    .content { padding: 28px; }
+    .card { max-width: 900px; background: white; border-radius: 14px; padding: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.05); }
+    h2 { font-family: Jost, sans-serif; margin-top: 0; }
+
+    .grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 18px;
+  row-gap: 28px;
+}
+    .full { grid-column: 1 / -1; }
+
+    label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+    input, select, textarea {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #ddd;
+  border-radius: 9px;
+  margin-bottom: 0;
+  font-family: "DM Sans", sans-serif;
+  background: white;
+}
+
+    button {
+      background: #BF1E2D;
+      color: white;
+      border: 0;
+      padding: 13px 22px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .note {
+      background: #f9fafb;
+      border-left: 4px solid #37B649;
+      padding: 13px 14px;
+      border-radius: 8px;
+      margin-bottom: 22px;
+      color: #4b5563;
+    }
+
+    .section-title {
+      font-family: Jost, sans-serif;
+      margin: 24px 0 14px;
+      padding-top: 18px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .sidebar { width: 220px; }
+      .main { margin-left: 220px; width: calc(100% - 220px); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <%- include("partials/sidebar") %>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>Add Directory</h1>
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <h2>Add New Business Directory</h2>
+
+        <div class="note">
+          Add the business details below. Logo will be saved in fixed landscape style on the listing.
+        </div>
+
+        <form method="POST" action="/admin/directories/add" enctype="multipart/form-data">
+          <div class="grid">
+            <div>
+              <label>Business Name</label>
+              <input type="text" name="business_name" placeholder="Example: Startup Muslim" required>
+            </div>
+
+            <div>
+              <label>Business Location</label>
+              <input 
+  type="text" 
+  name="business_location" 
+  placeholder="Example: Lahore, Pakistan" 
+  list="backendLocationSuggestions"
+  autocomplete="off"
+  required
+>
+
+<datalist id="backendLocationSuggestions">
+  <% locations.forEach(function(location) { %>
+    <option value="<%= location.business_location %>"></option>
+  <% }) %>
+</datalist>
+            </div>
+
+            <div>
+              <label>Business Type</label>
+              <select name="business_type_id" required>
+                <option value="">Select Business Type</option>
+                <% types.forEach(function(type) { %>
+                  <option value="<%= type.id %>"><%= type.name %></option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div>
+              <label>Business Category</label>
+              <select name="business_category_id" required>
+                <option value="">Select Business Category</option>
+                <% categories.forEach(function(category) { %>
+                  <option value="<%= category.id %>"><%= category.name %></option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div>
+              <label>Founder Name</label>
+              <input type="text" name="founder_name" placeholder="Example: Founder name">
+            </div>
+
+            <div>
+              <label>Established Year</label>
+              <input type="number" name="established_year" placeholder="Example: 2026" min="1800" max="2100">
+            </div>
+
+            <div>
+              <label>Rating</label>
+              <input type="number" name="rating" placeholder="Example: 4.8" min="0" max="5" step="0.1" value="0">
+            </div>
+
+            <div>
+              <label>Reviews Count</label>
+              <input type="number" name="review_count" placeholder="Example: 12" min="0" value="0">
+            </div>
+
+            <div>
+              <label>Verified Business</label>
+              <select name="is_verified">
+                <option value="1" selected>Verified</option>
+                <option value="0">Not Verified</option>
+              </select>
+            </div>
+
+            <div style="grid-column: 1 / -1;">
+              <label>Business Description</label>
+              <textarea name="description" placeholder="Short business description" rows="4"></textarea>
+            </div>
+
+            <div>
+              <label>Business Logo</label>
+              <input type="file" name="logo_image" accept="image/*">
+            </div>
+          </div>
+
+          <% if (filterFields.length > 0) { %>
+            <h2 class="section-title">Extra Directory Fields</h2>
+
+            <div class="grid">
+              <% filterFields.forEach(function(field) { %>
+                <div>
+                  <label><%= field.name %></label>
+
+                  <select name="filters[<%= field.id %>]">
+                    <option value="">Select <%= field.name %></option>
+
+                    <% field.values.forEach(function(item) { %>
+                      <option value="<%= item.id %>"><%= item.value %></option>
+                    <% }) %>
+                  </select>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+
+          <div class="section-title">Publishing Options</div>
+
+<label>Schedule Date & Time</label>
+<input type="datetime-local" name="scheduled_at">
+
+<div style="display:flex; gap:12px; flex-wrap:wrap;">
+  <button type="submit" name="save_action" value="publish">Publish</button>
+  <button type="submit" name="save_action" value="draft" style="background:#101820;">Save as Draft</button>
+  <button type="submit" name="save_action" value="schedule" style="background:#37B649;">Schedule</button>
+</div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

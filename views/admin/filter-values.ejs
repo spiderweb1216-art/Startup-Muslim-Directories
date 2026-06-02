@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title><%= field.name %> Values</title>
+  <style>
+    body { margin: 0; background: #f4f6f8; font-family: "DM Sans", sans-serif; color: #111827; }
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { width: 250px; background: #101820; color: white; position: fixed; inset: 0 auto 0 0; }
+    .brand { padding: 22px; font-family: Jost, sans-serif; font-size: 22px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .menu { padding: 15px; }
+    .menu a { display: block; color: #dfe6ee; text-decoration: none; padding: 13px 14px; border-radius: 8px; margin-bottom: 6px; font-weight: 500; }
+    .menu a:hover, .menu a.active { background: #BF1E2D; color: white; }
+    .main { margin-left: 250px; width: calc(100% - 250px); }
+    .topbar { height: 68px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 28px; }
+    .topbar h1 { font-family: Jost, sans-serif; margin: 0; font-size: 24px; }
+    .content { padding: 28px; display: grid; grid-template-columns: 380px 1fr; gap: 24px; }
+    .card { background: white; border-radius: 14px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.05); }
+    h2 { font-family: Jost, sans-serif; margin-top: 0; }
+    input { width: 100%; padding: 13px; border: 1px solid #ddd; border-radius: 9px; margin-bottom: 16px; font-family: "DM Sans", sans-serif; }
+    button { background: #BF1E2D; color: white; border: 0; padding: 12px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 14px; border-bottom: 1px solid #eee; }
+    th { background: #fafafa; font-family: Jost, sans-serif; }
+    .delete { color: #BF1E2D; text-decoration: none; font-weight: 700; }
+    .back { display: inline-block; margin-bottom: 18px; color: #37B649; text-decoration: none; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <%- include("partials/sidebar") %>
+  <main class="main">
+    <div class="topbar">
+      <h1><%= field.name %> Values</h1>
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <a class="back" href="/admin/filter-fields">← Back to Fields</a>
+
+        <h2>Filter Setting</h2>
+
+<form method="POST" action="/admin/filter-fields/<%= field.id %>/filter-status">
+  <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-weight:700;">
+    <input 
+      type="checkbox" 
+      name="show_in_filter" 
+      <%= field.show_in_filter == 1 ? "checked" : "" %>
+      style="width:auto; margin:0;"
+    >
+    Show this field in website filter
+  </label>
+
+  <button type="submit">Update Filter Setting</button>
+</form>
+
+<hr style="border:0; border-top:1px solid #e5e7eb; margin:24px 0;">
+
+<h2>Add Value</h2>
+
+<form method="POST" action="/admin/filter-fields/<%= field.id %>/values/add">
+  <input type="text" name="value" placeholder="Example: Pakistan" required>
+  <button type="submit">Add Value</button>
+</form>
+      </div>
+
+      <div class="card">
+        <h2>All Values</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Value</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <% if (values.length === 0) { %>
+              <tr>
+                <td colspan="2">No values added yet.</td>
+              </tr>
+            <% } %>
+
+            <% values.forEach(function(item) { %>
+              <tr>
+                <td><%= item.value %></td>
+                <td>
+                  <a class="delete" href="/admin/filter-values/delete/<%= item.id %>">Delete</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

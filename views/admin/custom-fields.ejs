@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Custom Fields</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Jost:wght@500;600;700&display=swap');
+
+    body {
+      margin: 0;
+      background: #f4f6f8;
+      font-family: "DM Sans", sans-serif;
+      color: #111827;
+    }
+
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 250px;
+      background: #101820;
+      color: white;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+    }
+
+    .brand {
+      padding: 22px;
+      font-family: Jost, sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .menu {
+      padding: 15px;
+    }
+
+    .menu a {
+      display: block;
+      color: #dfe6ee;
+      text-decoration: none;
+      padding: 13px 14px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .menu a:hover,
+    .menu a.active {
+      background: #BF1E2D;
+      color: white;
+    }
+
+    .main {
+      margin-left: 250px;
+      width: calc(100% - 250px);
+    }
+
+    .topbar {
+      height: 68px;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+    }
+
+    .topbar h1 {
+      font-family: Jost, sans-serif;
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .content {
+      padding: 28px;
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      gap: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+    }
+
+    h2 {
+      font-family: Jost, sans-serif;
+      margin-top: 0;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 7px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ddd;
+      border-radius: 9px;
+      margin-bottom: 16px;
+      font-family: "DM Sans", sans-serif;
+    }
+
+    textarea {
+      min-height: 95px;
+      resize: vertical;
+    }
+
+    .check {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .check input {
+      width: auto;
+      margin: 0;
+    }
+
+    button {
+      background: #BF1E2D;
+      color: white;
+      border: 0;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 14px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+
+    th {
+      background: #fafafa;
+      font-family: Jost, sans-serif;
+    }
+
+    .yes {
+      color: #37B649;
+      font-weight: 700;
+    }
+
+    .no {
+      color: #BF1E2D;
+      font-weight: 700;
+    }
+
+    .delete {
+      color: #BF1E2D;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .hint {
+      color: #6b7280;
+      font-size: 14px;
+      margin-top: -10px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="brand">Startup Muslim</div>
+
+    <nav class="menu">
+      <a href="/admin/dashboard">Dashboard</a>
+      <a href="/admin/directories">All Directories</a>
+      <a href="/admin/directories/add">Add Directory</a>
+      <a class="active" href="/admin/custom-fields">Custom Fields</a>
+      <a href="/directories" target="_blank">View Website</a>
+      <a href="/admin/logout">Logout</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>Custom Fields</h1>
+    </div>
+
+    <div class="content">
+
+      <div class="card">
+        <h2>Add Custom Field</h2>
+
+        <form method="POST" action="/admin/custom-fields/add">
+          <label>Field Label</label>
+          <input type="text" name="label" placeholder="Example: Business Type" required>
+
+          <label>Field Type</label>
+          <select name="field_type" id="field_type">
+            <option value="text">Free Text</option>
+            <option value="dropdown">Dropdown</option>
+          </select>
+
+          <div id="dropdownBox" style="display:none;">
+            <label>Dropdown Values</label>
+            <textarea name="dropdown_values" placeholder="Restaurant&#10;Tech Startup&#10;Education"></textarea>
+            <div class="hint">Add one value per line.</div>
+          </div>
+
+          <div class="check">
+            <input type="checkbox" name="show_on_card" checked>
+            <span>Show on directory card</span>
+          </div>
+
+          <div class="check">
+            <input type="checkbox" name="show_in_filter">
+            <span>Show in filter</span>
+          </div>
+
+          <div class="check">
+            <input type="checkbox" name="required">
+            <span>Required field</span>
+          </div>
+
+          <button type="submit">Add Field</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>All Custom Fields</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Type</th>
+              <th>Values</th>
+              <th>Card</th>
+              <th>Filter</th>
+              <th>Required</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <% if (fields.length === 0) { %>
+              <tr>
+                <td colspan="7">No custom fields added yet.</td>
+              </tr>
+            <% } %>
+
+            <% fields.forEach(function(field) { %>
+              <tr>
+                <td><%= field.label %></td>
+                <td><%= field.field_type %></td>
+                <td><%= field.dropdown_values || "-" %></td>
+                <td><%= field.show_on_card == 1 ? "Yes" : "No" %></td>
+                <td><%= field.show_in_filter == 1 ? "Yes" : "No" %></td>
+                <td><%= field.required == 1 ? "Yes" : "No" %></td>
+                <td>
+                  <a class="delete" href="/admin/custom-fields/delete/<%= field.id %>">Delete</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+
+</div>
+
+<script>
+  const fieldType = document.getElementById("field_type");
+  const dropdownBox = document.getElementById("dropdownBox");
+
+  fieldType.addEventListener("change", function () {
+    dropdownBox.style.display = this.value === "dropdown" ? "block" : "none";
+  });
+</script>
+
+</body>
+</html>

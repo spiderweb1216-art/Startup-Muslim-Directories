@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard | Startup Muslim</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Jost:wght@500;600;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #f4f6f8;
+      font-family: "DM Sans", sans-serif;
+      color: #1d2327;
+    }
+
+    .admin-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 250px;
+      background: #101820;
+      color: #fff;
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+    }
+
+    .brand {
+      padding: 22px;
+      font-family: Jost, sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .menu {
+      padding: 15px;
+    }
+
+    .menu a {
+      display: block;
+      color: #dfe6ee;
+      text-decoration: none;
+      padding: 13px 14px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .menu a:hover,
+    .menu a.active {
+      background: #BF1E2D;
+      color: #fff;
+    }
+
+    .main {
+      margin-left: 250px;
+      width: calc(100% - 250px);
+    }
+
+    .topbar {
+      height: 68px;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+    }
+
+    .topbar h1 {
+      font-family: Jost, sans-serif;
+      font-size: 24px;
+      margin: 0;
+    }
+
+    .logout {
+      background: #37B649;
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+
+    .content {
+      padding: 28px;
+    }
+
+    .welcome {
+      background: #fff;
+      padding: 25px;
+      border-radius: 14px;
+      border-left: 5px solid #BF1E2D;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+      margin-bottom: 24px;
+    }
+
+    .welcome h2 {
+      font-family: Jost, sans-serif;
+      margin-top: 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: #fff;
+      padding: 22px;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+    }
+
+    .stat-card span {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .stat-card h3 {
+      font-family: Jost, sans-serif;
+      font-size: 34px;
+      margin: 8px 0 0;
+      color: #BF1E2D;
+    }
+
+    .quick-actions {
+      background: #fff;
+      padding: 24px;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+    }
+
+    .quick-actions h2 {
+      font-family: Jost, sans-serif;
+      margin-top: 0;
+    }
+
+    .btn {
+      display: inline-block;
+      background: #BF1E2D;
+      color: white;
+      padding: 12px 18px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700;
+      margin-right: 10px;
+      margin-top: 8px;
+    }
+
+    .btn.green {
+      background: #37B649;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar {
+        width: 210px;
+      }
+
+      .main {
+        margin-left: 210px;
+        width: calc(100% - 210px);
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="admin-layout">
+
+  <%- include("partials/sidebar") %>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>Dashboard</h1>
+      <a class="logout" href="/admin/logout">Logout</a>
+    </div>
+
+    <div class="content">
+
+      <section class="welcome">
+        <h2>Welcome back</h2>
+        <p>You are logged in as <strong><%= admin.email %></strong>.</p>
+        <p>Manage your Startup Muslim business directories from this dashboard.</p>
+      </section>
+
+      <section class="stats">
+  <div class="stat-card">
+    <span>Total Directories</span>
+    <h3><%= directoryCount %></h3>
+  </div>
+
+  <div class="stat-card">
+    <span>Business Types</span>
+    <h3><%= typeCount %></h3>
+  </div>
+
+  <div class="stat-card">
+    <span>Business Categories</span>
+    <h3><%= categoryCount %></h3>
+  </div>
+</section>
+
+      <section class="quick-actions">
+        <h2>Quick Actions</h2>
+        <a class="btn" href="/admin/directories/add">Add New Directory</a>
+        <a class="btn green" href="/admin/directories">Manage Directories</a>
+      </section>
+
+    </div>
+  </main>
+
+</div>
+
+</body>
+</html>
