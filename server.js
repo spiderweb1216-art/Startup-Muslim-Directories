@@ -32,8 +32,7 @@ app.use(
 );
 
 function requireAdmin(req, res, next) {
-  if (!req.session.admin) return res.redirect("/admin/login");
-
+if (!req.session.admin) return res.redirect("/admin");
   db.all("SELECT * FROM filter_fields ORDER BY id ASC", [], (err, fields) => {
     res.locals.sidebarFields = fields || [];
     next();
@@ -243,13 +242,9 @@ async function getOrCreateFilterValue(connection, fieldId, value) {
   return insertResult.insertId;
 }
 
-app.get("/", (req, res) => {
-  res.redirect("/directories");
-});
+/* Public Directory Home Page */
 
-/* Public Directory Page */
-
-app.get("/directories", (req, res) => {
+function renderHomePage(req, res) {
   const hasHomeFilter =
     req.query.business_type_id ||
     req.query.business_category_id ||
@@ -414,7 +409,17 @@ if (req.query.established_year) {
       );
     });
   });
+}
+
+app.get("/", renderHomePage);
+
+app.get("/directories", (req, res) => {
+  const params = new URLSearchParams(req.query);
+  const queryString = params.toString();
+
+  return res.redirect(queryString ? `/?${queryString}` : "/");
 });
+
 app.get("/businesses", (req, res) => {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const limit = 20;
@@ -1240,11 +1245,19 @@ app.post("/admin/directories/:id/delete", requireAdmin, async (req, res) => {
 
   res.redirect(req.get("Referrer") || "/admin/directories");
 });
-app.get("/admin/login", (req, res) => {
+app.get("/admin", (req, res) => {
+  if (req.session.admin) {
+    return res.redirect("/admin/dashboard");
+  }
+
   res.render("admin/login", { error: null });
 });
 
-app.post("/admin/login", (req, res) => {
+app.get("/admin/login", (req, res) => {
+  res.redirect("/admin");
+});
+
+function handleAdminLogin(req, res) {
   const { email, password } = req.body;
 
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
@@ -1272,11 +1285,14 @@ app.post("/admin/login", (req, res) => {
 
     res.redirect("/admin/dashboard");
   });
-});
+}
+
+app.post("/admin", handleAdminLogin);
+app.post("/admin/login", handleAdminLogin);
 
 app.get("/admin/logout", (req, res) => {
   req.session.destroy(() => {
-    res.redirect("/admin/login");
+    res.redirect("/admin");
   });
 });
 
