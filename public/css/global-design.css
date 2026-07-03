@@ -596,3 +596,74 @@ table {
     white-space: normal !important;
   }
 }
+/* ================================
+   SEARCH DROPDOWN Z-INDEX FIX
+   Dropdown should appear above all sections
+   ================================ */
+
+.hero,
+.hero .container,
+.hero-box,
+.search-wrap,
+.search-box,
+.search-grid,
+.custom-select,
+.location-field {
+  overflow: visible !important;
+}
+
+.hero {
+  position: relative !important;
+  z-index: 999 !important;
+}
+
+.hero .container {
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+.hero-box {
+  position: relative !important;
+  z-index: 1001 !important;
+}
+
+.search-wrap {
+  position: relative !important;
+  z-index: 1002 !important;
+}
+
+.search-box {
+  position: relative !important;
+  z-index: 1003 !important;
+}
+
+.search-grid {
+  position: relative !important;
+  z-index: 1004 !important;
+}
+
+.custom-select,
+.location-field {
+  position: relative !important;
+  z-index: 1005 !important;
+}
+
+.custom-select.active {
+  z-index: 999999 !important;
+}
+
+.custom-options,
+.location-dropdown {
+  position: absolute !important;
+  z-index: 999999 !important;
+  background: #ffffff !important;
+}
+
+/* Keep lower sections behind dropdown */
+.results-wrap,
+.directory-grid,
+.listing-process-section,
+.directory-stats-section {
+  position: relative !important;
+  z-index: 1 !important;
+}
