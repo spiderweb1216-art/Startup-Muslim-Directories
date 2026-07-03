@@ -5,6 +5,8 @@ const session = require("express-session");
 const multer = require("multer");
 const bcrypt = require("bcryptjs");
 const fs = require("fs");
+const csvParser = require("csv-parser");
+const { Readable } = require("stream");
 
 dotenv.config();
 
@@ -107,6 +109,159 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+  fileFilter: function (req, file, cb) {
+    if (
+      file.mimetype === "text/csv" ||
+      file.mimetype === "application/vnd.ms-excel" ||
+      file.originalname.toLowerCase().endsWith(".csv")
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only CSV files are allowed"));
+    }
+  },
+});
+
+function parseCsvBuffer(buffer) {
+  return new Promise((resolve, reject) => {
+    const rows = [];
+
+    const cleanText = buffer.toString("utf8").replace(/^\uFEFF/, "");
+
+    Readable.from(cleanText)
+      .pipe(csvParser())
+      .on("data", (row) => rows.push(row))
+      .on("end", () => resolve(rows))
+      .on("error", reject);
+  });
+}
+
+function normalizeKey(key) {
+  return String(key || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^\uFEFF/, "")
+    .replace(/[\s\-]+/g, "_");
+}
+
+function getCsvValue(row, names) {
+  const keys = Object.keys(row || {});
+
+  for (const name of names) {
+    const wanted = normalizeKey(name);
+    const foundKey = keys.find((key) => normalizeKey(key) === wanted);
+
+    if (foundKey) {
+      return String(row[foundKey] || "").trim();
+    }
+  }
+
+  return "";
+}
+
+function toNumber(value, fallback = null) {
+  if (value === undefined || value === null || value === "") return fallback;
+
+  const number = Number(value);
+
+  if (Number.isNaN(number)) return fallback;
+
+  return number;
+}
+
+function toVerified(value) {
+  const clean = String(value || "").trim().toLowerCase();
+
+  if (!clean) return 1;
+
+  if (["yes", "true", "1", "verified", "publish", "published"].includes(clean)) {
+    return 1;
+  }
+
+  if (["no", "false", "0", "unverified"].includes(clean)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+function cleanStatus(value) {
+  const clean = String(value || "").trim().toLowerCase();
+
+  if (["draft", "scheduled", "published"].includes(clean)) {
+    return clean;
+  }
+
+  return "published";
+}
+
+async function getOrCreateByName(connection, table, name) {
+  const cleanName = String(name || "").trim();
+
+  if (!cleanName) return null;
+
+  const [existingRows] = await connection.query(
+    `SELECT id FROM ${table} WHERE name = ? LIMIT 1`,
+    [cleanName]
+  );
+
+  if (existingRows.length > 0) {
+    return existingRows[0].id;
+  }
+
+  try {
+    const [insertResult] = await connection.query(
+      `INSERT INTO ${table} (name) VALUES (?)`,
+      [cleanName]
+    );
+
+    return insertResult.insertId;
+  } catch (error) {
+    const [rowsAfterError] = await connection.query(
+      `SELECT id FROM ${table} WHERE name = ? LIMIT 1`,
+      [cleanName]
+    );
+
+    return rowsAfterError.length > 0 ? rowsAfterError[0].id : null;
+  }
+}
+
+async function getOrCreateFilterValue(connection, fieldId, value) {
+  const cleanValue = String(value || "").trim();
+
+  if (!cleanValue) return null;
+
+  const [existingRows] = await connection.query(
+    `
+    SELECT id
+    FROM filter_values
+    WHERE field_id = ?
+    AND value = ?
+    LIMIT 1
+    `,
+    [fieldId, cleanValue]
+  );
+
+  if (existingRows.length > 0) {
+    return existingRows[0].id;
+  }
+
+  const [insertResult] = await connection.query(
+    `
+    INSERT INTO filter_values
+    (field_id, value)
+    VALUES (?, ?)
+    `,
+    [fieldId, cleanValue]
+  );
+
+  return insertResult.insertId;
+}
 
 app.get("/", (req, res) => {
   res.redirect("/directories");
@@ -416,8 +571,13 @@ if (req.query.established_year) {
     });
   });
 });
+app.get("/login", (req, res) => {
+  res.redirect("/admin/login");
+});
 /* Login */
-
+app.get("/login", (req, res) => {
+  res.redirect("/admin/login");
+});
 app.get("/admin/login", (req, res) => {
   res.render("admin/login", { error: null });
 });
@@ -759,7 +919,334 @@ app.post("/admin/directories/add", requireAdmin, upload.single("logo_image"), (r
     }
   );
 });
+/* Import Businesses CSV */
 
+app.get("/admin/directories/import", requireAdmin, (req, res) => {
+  res.render("admin/import-businesses", {
+    result: null,
+    error: null,
+  });
+});
+
+app.post(
+  "/admin/directories/import",
+  requireAdmin,
+  csvUpload.single("csv_file"),
+  async (req, res) => {
+    if (!req.file) {
+      return res.render("admin/import-businesses", {
+        result: null,
+        error: "Please upload a CSV file.",
+      });
+    }
+
+    let rows = [];
+
+    try {
+      rows = await parseCsvBuffer(req.file.buffer);
+    } catch (error) {
+      return res.render("admin/import-businesses", {
+        result: null,
+        error: "CSV file could not be read. Please check the file format.",
+      });
+    }
+
+    if (!rows.length) {
+      return res.render("admin/import-businesses", {
+        result: null,
+        error: "CSV file is empty.",
+      });
+    }
+
+    const connection = await db.pool.getConnection();
+
+    const result = {
+      totalRows: rows.length,
+      inserted: 0,
+      skipped: 0,
+      errors: [],
+      createdTypes: 0,
+      createdCategories: 0,
+    };
+
+    try {
+      await connection.beginTransaction();
+
+      const [filterFields] = await connection.query(
+        "SELECT * FROM filter_fields ORDER BY id ASC"
+      );
+
+      for (let index = 0; index < rows.length; index++) {
+        const row = rows[index];
+        const rowNumber = index + 2;
+
+        const businessName = getCsvValue(row, [
+          "business_name",
+          "business name",
+          "name",
+          "company_name",
+          "company name",
+        ]);
+
+        const businessLocation = getCsvValue(row, [
+          "business_location",
+          "business location",
+          "location",
+          "city",
+          "country",
+        ]);
+
+        const businessTypeName = getCsvValue(row, [
+          "business_type",
+          "business type",
+          "type",
+        ]);
+
+        const businessCategoryName = getCsvValue(row, [
+          "business_category",
+          "business category",
+          "category",
+        ]);
+
+        if (!businessName) {
+          result.skipped++;
+          result.errors.push(`Row ${rowNumber}: Business name is missing.`);
+          continue;
+        }
+
+        if (!businessLocation) {
+          result.skipped++;
+          result.errors.push(`Row ${rowNumber}: Business location is missing.`);
+          continue;
+        }
+
+        const [duplicateRows] = await connection.query(
+          `
+          SELECT id
+          FROM directories
+          WHERE business_name = ?
+          AND business_location = ?
+          LIMIT 1
+          `,
+          [businessName, businessLocation]
+        );
+
+        if (duplicateRows.length > 0) {
+          result.skipped++;
+          result.errors.push(
+            `Row ${rowNumber}: Skipped duplicate business "${businessName}" in "${businessLocation}".`
+          );
+          continue;
+        }
+
+        let businessTypeId = null;
+        let businessCategoryId = null;
+
+        if (businessTypeName) {
+          const [beforeTypeRows] = await connection.query(
+            "SELECT id FROM business_types WHERE name = ? LIMIT 1",
+            [businessTypeName]
+          );
+
+          businessTypeId = await getOrCreateByName(
+            connection,
+            "business_types",
+            businessTypeName
+          );
+
+          if (beforeTypeRows.length === 0 && businessTypeId) {
+            result.createdTypes++;
+          }
+        }
+
+        if (businessCategoryName) {
+          const [beforeCategoryRows] = await connection.query(
+            "SELECT id FROM business_categories WHERE name = ? LIMIT 1",
+            [businessCategoryName]
+          );
+
+          businessCategoryId = await getOrCreateByName(
+            connection,
+            "business_categories",
+            businessCategoryName
+          );
+
+          if (beforeCategoryRows.length === 0 && businessCategoryId) {
+            result.createdCategories++;
+          }
+        }
+
+        const founderName = getCsvValue(row, [
+          "founder_name",
+          "founder name",
+          "founder",
+        ]);
+
+        const establishedYear = toNumber(
+          getCsvValue(row, ["established_year", "established year", "year"]),
+          null
+        );
+
+        const rating = toNumber(getCsvValue(row, ["rating"]), 0);
+        const reviewCount = toNumber(
+          getCsvValue(row, ["review_count", "review count", "reviews"]),
+          0
+        );
+
+        const description = getCsvValue(row, [
+          "description",
+          "business_description",
+          "business description",
+          "about",
+        ]);
+
+        const websiteUrl = getCsvValue(row, [
+          "website_url",
+          "website url",
+          "website",
+          "url",
+        ]);
+
+        const contactEmail = getCsvValue(row, [
+          "contact_email",
+          "contact email",
+          "email",
+          "business_email",
+          "business email",
+        ]);
+
+        const phoneNumber = getCsvValue(row, [
+          "phone_number",
+          "phone number",
+          "phone",
+          "whatsapp",
+        ]);
+
+        const socialLink = getCsvValue(row, [
+          "social_link",
+          "social link",
+          "linkedin",
+          "instagram",
+          "facebook",
+        ]);
+
+        const logoImage = getCsvValue(row, [
+          "logo_image",
+          "logo image",
+          "logo",
+          "logo_filename",
+        ]);
+
+        const isVerified = toVerified(
+          getCsvValue(row, ["is_verified", "is verified", "verified"])
+        );
+
+        const status = cleanStatus(getCsvValue(row, ["status"]));
+
+        const [insertResult] = await connection.query(
+          `
+          INSERT INTO directories
+          (
+            business_name,
+            business_location,
+            business_type_id,
+            business_category_id,
+            founder_name,
+            logo_image,
+            established_year,
+            rating,
+            review_count,
+            description,
+            is_verified,
+            status,
+            scheduled_at,
+            website_url,
+            contact_email,
+            phone_number,
+            submitter_name,
+            submitter_email,
+            submitter_phone,
+            social_link
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          [
+            businessName,
+            businessLocation,
+            businessTypeId,
+            businessCategoryId,
+            founderName || null,
+            logoImage || null,
+            establishedYear,
+            rating,
+            reviewCount,
+            description || null,
+            isVerified,
+            status,
+            null,
+            websiteUrl || null,
+            contactEmail || null,
+            phoneNumber || null,
+            null,
+            null,
+            null,
+            socialLink || null,
+          ]
+        );
+
+        const directoryId = insertResult.insertId;
+
+        for (const field of filterFields) {
+          const fieldValue = getCsvValue(row, [
+            field.slug,
+            field.name,
+            `filter_${field.slug}`,
+            `filter_${field.id}`,
+          ]);
+
+          if (!fieldValue) continue;
+
+          const valueId = await getOrCreateFilterValue(
+            connection,
+            field.id,
+            fieldValue
+          );
+
+          if (valueId) {
+            await connection.query(
+              `
+              INSERT INTO directory_filter_values
+              (directory_id, field_id, value_id)
+              VALUES (?, ?, ?)
+              `,
+              [directoryId, field.id, valueId]
+            );
+          }
+        }
+
+        result.inserted++;
+      }
+
+      await connection.commit();
+
+      res.render("admin/import-businesses", {
+        result,
+        error: null,
+      });
+    } catch (error) {
+      await connection.rollback();
+
+      console.error("CSV Import Error:", error);
+
+      res.render("admin/import-businesses", {
+        result: null,
+        error: "Import failed: " + error.message,
+      });
+    } finally {
+      connection.release();
+    }
+  }
+);
 /* All Directories Admin */
 
 app.get("/admin/directories", requireAdmin, (req, res) => {

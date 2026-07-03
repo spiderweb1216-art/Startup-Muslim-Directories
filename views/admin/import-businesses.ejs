@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Import Businesses</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Outfit:wght@400;500;600&display=swap');
+
+    * {
+      box-sizing: border-box;
+      border-radius: 0 !important;
+    }
+
+    body {
+      margin: 0;
+      background: #f4f6f8;
+      font-family: "Outfit", sans-serif;
+      color: #111827;
+      font-weight: 400;
+    }
+
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 250px;
+      background: #101820;
+      color: white;
+      position: fixed;
+      inset: 0 auto 0 0;
+    }
+
+    .brand {
+      padding: 22px;
+      font-family: "Fraunces", serif;
+      font-size: 22px;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .menu {
+      padding: 15px;
+    }
+
+    .menu a {
+      display: block;
+      color: #dfe6ee;
+      text-decoration: none;
+      padding: 13px 14px;
+      margin-bottom: 6px;
+      font-weight: 400;
+    }
+
+    .menu a:hover,
+    .menu a.active {
+      background: #BF1E2D;
+      color: white;
+    }
+
+    .main {
+      margin-left: 250px;
+      width: calc(100% - 250px);
+    }
+
+    .topbar {
+      height: 68px;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+    }
+
+    .topbar h1 {
+      font-family: "Fraunces", serif;
+      margin: 0;
+      font-size: 26px;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 28px;
+    }
+
+    .card {
+      background: white;
+      padding: 28px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+      max-width: 980px;
+    }
+
+    .card h2 {
+      font-family: "Fraunces", serif;
+      font-size: 32px;
+      font-weight: 600;
+      margin: 0 0 10px;
+    }
+
+    .intro {
+      color: #6b7280;
+      margin: 0 0 24px;
+      line-height: 1.7;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      padding: 14px;
+      font-family: "Outfit", sans-serif;
+      margin-bottom: 18px;
+    }
+
+    .submit-btn {
+      background: #BF1E2D;
+      color: white;
+      border: 0;
+      padding: 14px 22px;
+      font-family: "Outfit", sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      cursor: pointer;
+    }
+
+    .submit-btn:hover {
+      background: #9f1824;
+    }
+
+    .alert {
+      padding: 16px;
+      margin-bottom: 20px;
+      border: 1px solid;
+      line-height: 1.6;
+    }
+
+    .alert-error {
+      background: #fef2f2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+
+    .alert-success {
+      background: #ecfdf5;
+      color: #065f46;
+      border-color: #a7f3d0;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 22px 0;
+    }
+
+    .stat-box {
+      border: 1px solid #e5e7eb;
+      background: #fafafa;
+      padding: 18px;
+    }
+
+    .stat-box strong {
+      display: block;
+      font-family: "Fraunces", serif;
+      font-size: 28px;
+      font-weight: 600;
+      color: #BF1E2D;
+      margin-bottom: 4px;
+    }
+
+    .stat-box span {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .sample-box {
+      margin-top: 28px;
+      border: 1px solid #e5e7eb;
+      background: #fafafa;
+      padding: 20px;
+    }
+
+    .sample-box h3 {
+      font-family: "Fraunces", serif;
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 12px;
+    }
+
+    pre {
+      background: #111827;
+      color: #f9fafb;
+      padding: 16px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      line-height: 1.7;
+      font-size: 13px;
+    }
+
+    .errors-list {
+      margin: 18px 0 0;
+      padding-left: 18px;
+      color: #991b1b;
+      line-height: 1.7;
+    }
+
+    .note {
+      margin-top: 14px;
+      color: #6b7280;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 900px) {
+      .main {
+        margin-left: 0;
+        width: 100%;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="layout">
+  <%- include("partials/sidebar") %>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>Import Businesses</h1>
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <h2>CSV Business Import</h2>
+
+        <p class="intro">
+          Upload a CSV file to import multiple businesses into the directory. Existing businesses with the same business name and location will be skipped to avoid duplicates.
+        </p>
+
+        <% if (error) { %>
+          <div class="alert alert-error">
+            <%= error %>
+          </div>
+        <% } %>
+
+        <% if (result) { %>
+          <div class="alert alert-success">
+            CSV import completed.
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-box">
+              <strong><%= result.totalRows %></strong>
+              <span>Total rows</span>
+            </div>
+
+            <div class="stat-box">
+              <strong><%= result.inserted %></strong>
+              <span>Businesses inserted</span>
+            </div>
+
+            <div class="stat-box">
+              <strong><%= result.skipped %></strong>
+              <span>Rows skipped</span>
+            </div>
+
+            <div class="stat-box">
+              <strong><%= result.createdTypes + result.createdCategories %></strong>
+              <span>New types/categories</span>
+            </div>
+          </div>
+
+          <% if (result.errors && result.errors.length > 0) { %>
+            <ul class="errors-list">
+              <% result.errors.slice(0, 30).forEach(function(item) { %>
+                <li><%= item %></li>
+              <% }) %>
+            </ul>
+          <% } %>
+        <% } %>
+
+        <form action="/admin/directories/import" method="POST" enctype="multipart/form-data">
+          <label>Select CSV File</label>
+          <input type="file" name="csv_file" accept=".csv" required>
+
+          <button type="submit" class="submit-btn">
+            Import CSV
+          </button>
+        </form>
+
+        <div class="note">
+          Logo images are not uploaded through CSV. If you add <strong>logo_image</strong>, it should be the filename already uploaded inside <strong>public/uploads/logos</strong>.
+        </div>
+
+        <div class="sample-box">
+          <h3>CSV Format Example</h3>
+
+          <pre>business_name,business_location,business_type,business_category,founder_name,established_year,rating,review_count,description,is_verified,status,website_url,contact_email,phone_number,social_link,logo_image
+Halal Tech London,London UK,Technology,Software,Ahmed Khan,2024,0,0,"A Muslim-led technology business.",yes,published,https://example.com,info@example.com,+440000000000,https://linkedin.com/company/example,logo.png
+Modest Wear Co,Dubai UAE,Fashion,Ecommerce,Aisha Rahman,2022,0,0,"Modest fashion brand for Muslim women.",yes,published,https://example2.com,hello@example2.com,+971000000000,https://instagram.com/example2,</pre>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>
