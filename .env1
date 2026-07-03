@@ -1,0 +1,10 @@
+NODE_ENV=development
+SESSION_SECRET=startup_muslim_directory_secret_2026
+ADMIN_EMAIL=admin@startupmuslim.com
+ADMIN_PASSWORD=Admin@12345
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=u206452855_sm_directory
+DB_USER=u206452855_sm_directory
+DB_PASSWORD=+6ZaJd!?#+jI
