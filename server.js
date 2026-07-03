@@ -10,6 +10,25 @@ dotenv.config();
 
 const db = require("./db/database");
 const app = express();
+app.get("/db-check", async (req, res) => {
+  try {
+    db.all("SELECT * FROM business_types ORDER BY name ASC", [], (err, rows) => {
+      if (err) {
+        console.error("DB CHECK ERROR:", err);
+        return res.send("DB CHECK ERROR: " + err.message);
+      }
+
+      res.json({
+        status: "Database connected",
+        business_types_count: rows.length,
+        business_types: rows,
+      });
+    });
+  } catch (error) {
+    console.error("DB CHECK CATCH ERROR:", error);
+    res.send("DB CHECK CATCH ERROR: " + error.message);
+  }
+});
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
