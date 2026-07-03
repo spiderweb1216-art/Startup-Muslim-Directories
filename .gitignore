@@ -1,5 +1,33 @@
+# Node packages - keep local, do not upload to GitHub
+node_modules/
+
+# Secret local environment file
+.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
 node_modules/
 .env
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/

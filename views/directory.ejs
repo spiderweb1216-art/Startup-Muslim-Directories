@@ -1393,6 +1393,7 @@
   }
 }
   </style>
+  <link rel="stylesheet" href="/css/global-design.css">
 </head>
 
 <body>
@@ -1773,39 +1774,7 @@
 
   </div>
 </section>
-<section class="directory-stats-section">
-  <div class="stats-bg-pattern"></div>
 
-  <div class="stats-inner">
-    <div class="stats-content">
-      <span class="stats-eyebrow">Startup Muslim Directory</span>
-
-      <h2>Helping people discover Muslim businesses with ease</h2>
-
-      <p>
-        Browse growing businesses, categories, locations and trusted listings from the Startup Muslim community.
-      </p>
-    </div>
-
-    <div class="stats-grid">
-      <div class="stats-card">
-<strong><%= typeof stats !== "undefined" && stats.businesses ? stats.businesses : 0 %>+</strong>        <span>Businesses Listed</span>
-      </div>
-
-      <div class="stats-card">
-<strong><%= typeof stats !== "undefined" && stats.categories ? stats.categories : 0 %>+</strong>        <span>Business Categories</span>
-      </div>
-
-      <div class="stats-card">
-<strong><%= typeof stats !== "undefined" && stats.types ? stats.types : 0 %>+</strong>        <span>Business Types</span>
-      </div>
-
-      <div class="stats-card">
-<strong><%= typeof stats !== "undefined" && stats.locations ? stats.locations : 0 %>+</strong>        <span>Locations Covered</span>
-      </div>
-    </div>
-  </div>
-</section>
     </div>
   </main>
 
@@ -1924,6 +1893,20 @@
       }
     });
   </script>
+<footer class="sm-simple-footer">
+  <div class="sm-footer-inner">
+    <div class="sm-footer-links">
+      <a href="https://startupmuslim.com/privacy-policy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+      <a href="https://startupmuslim.com/terms-of-use/" target="_blank" rel="noopener noreferrer">Terms of Use</a>
+      <a href="https://startupmuslim.com/collection-notice/" target="_blank" rel="noopener noreferrer">Collection Notice</a>
+    </div>
 
+    <div class="sm-footer-copy">
+      © 2026 StartupMuslim.com <span>|</span> Powered by <strong>Alagzoo</strong>
+    </div>
+
+    <div class="sm-footer-empty"></div>
+  </div>
+</footer>
 </body>
 </html>
