@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Business Login | Startup Muslim</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/business-dashboard.css">
+</head>
+<body>
+  <main class="auth-page">
+    <section class="auth-brand-panel">
+      <div>
+        <a class="auth-logo" href="/directories">
+          <img src="/uploads/sm-logo.webp" alt="Startup Muslim Logo">
+        </a>
+        <h1>Manage your listed businesses.</h1>
+        <p>Login to add new businesses, edit existing details, request deletion, and track approval status.</p>
+      </div>
+      <p>Only admin-approved businesses are published on the public website.</p>
+    </section>
+
+    <section class="auth-card-wrap">
+      <div class="auth-card">
+        <h2>Business login</h2>
+        <p>Access your Startup Muslim business dashboard.</p>
+
+        <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+        <form method="POST" action="/login">
+          <label>Email Address</label>
+          <input type="email" name="email" required>
+
+          <label>Password</label>
+          <input type="password" name="password" required>
+
+          <button class="user-btn" style="width:100%; margin-top:20px;" type="submit">Login</button>
+        </form>
+
+        <div class="auth-link">New here? <a href="/register-business">Register your business</a></div>
+        <div class="auth-link">Admin? <a href="/admin/login">Admin login</a></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

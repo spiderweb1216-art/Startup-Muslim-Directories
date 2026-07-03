@@ -12,26 +12,6 @@ dotenv.config();
 
 const db = require("./db/database");
 const app = express();
-app.get("/db-check", async (req, res) => {
-  try {
-    db.all("SELECT * FROM business_types ORDER BY name ASC", [], (err, rows) => {
-      if (err) {
-        console.error("DB CHECK ERROR:", err);
-        return res.send("DB CHECK ERROR: " + err.message);
-      }
-
-      res.json({
-        status: "Database connected",
-        business_types_count: rows.length,
-        business_types: rows,
-      });
-    });
-  } catch (error) {
-    console.error("DB CHECK CATCH ERROR:", error);
-    res.send("DB CHECK CATCH ERROR: " + error.message);
-  }
-});
-
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
@@ -193,7 +173,7 @@ function toVerified(value) {
 function cleanStatus(value) {
   const clean = String(value || "").trim().toLowerCase();
 
-  if (["draft", "scheduled", "published"].includes(clean)) {
+  if (["draft", "scheduled", "published", "pending", "rejected", "delete_requested"].includes(clean)) {
     return clean;
   }
 
@@ -311,7 +291,7 @@ app.get("/directories", (req, res) => {
               };
             });
 
-            let where = [];
+            let where = ["directories.status = 'published'"];
             let params = [];
 
             if (req.query.business_type_id) {
@@ -395,13 +375,14 @@ if (req.query.established_year) {
                   `
                   SELECT DISTINCT business_location 
                   FROM directories 
-                  WHERE business_location IS NOT NULL 
+                  WHERE directories.status = 'published'
+                  AND business_location IS NOT NULL 
                   AND TRIM(business_location) != ''
                   ORDER BY business_location ASC
                   `,
                   [],
                   (locErr, locationRows) => {
-                    db.get("SELECT COUNT(*) AS total FROM directories", [], (businessCountErr, businessCountRow) => {
+                    db.get("SELECT COUNT(*) AS total FROM directories WHERE status = 'published'", [], (businessCountErr, businessCountRow) => {
                       db.get("SELECT COUNT(*) AS total FROM business_categories", [], (categoryCountErr, categoryCountRow) => {
                         db.get("SELECT COUNT(*) AS total FROM business_types", [], (typeCountErr, typeCountRow) => {
                           res.render("directory", {
@@ -461,7 +442,7 @@ app.get("/businesses", (req, res) => {
               };
             });
 
-            let where = [];
+            let where = ["directories.status = 'published'"];
             let params = [];
 
             if (req.query.business_type_id) {
@@ -544,7 +525,8 @@ if (req.query.established_year) {
                   `
                   SELECT DISTINCT business_location 
                   FROM directories 
-                  WHERE business_location IS NOT NULL 
+                  WHERE directories.status = 'published'
+                  AND business_location IS NOT NULL 
                   AND TRIM(business_location) != ''
                   ORDER BY business_location ASC
                   `,
@@ -571,12 +553,692 @@ if (req.query.established_year) {
     });
   });
 });
-app.get("/login", (req, res) => {
-  res.redirect("/admin/login");
+/* Business User Auth + Dashboard */
+
+async function requireBusinessUser(req, res, next) {
+  if (!req.session.businessUser) {
+    return res.redirect("/login");
+  }
+
+  res.locals.user = req.session.businessUser;
+  res.locals.queryStatus = getAllowedDashboardStatus(req.query.status || "all");
+
+  try {
+    res.locals.statusCounts = await getUserStatusCounts(req.session.businessUser.id);
+  } catch (error) {
+    console.error("Business user sidebar count error:", error.message);
+    res.locals.statusCounts = { all: 0, pending: 0, published: 0, rejected: 0, delete_requested: 0 };
+  }
+
+  next();
+}
+
+function businessStatusLabel(status) {
+  const labels = {
+    pending: "Pending Approval",
+    published: "Approved & Live",
+    rejected: "Not Approved",
+    delete_requested: "Delete Requested",
+    draft: "Draft",
+    scheduled: "Scheduled",
+  };
+
+  return labels[status] || "Pending Approval";
+}
+
+async function loadBusinessFormOptions() {
+  const types = await db.all("SELECT * FROM business_types ORDER BY name ASC");
+  const categories = await db.all("SELECT * FROM business_categories ORDER BY name ASC");
+  const fields = await db.all("SELECT * FROM filter_fields ORDER BY name ASC");
+  const values = await db.all("SELECT * FROM filter_values ORDER BY value ASC");
+
+  const filterFields = fields.map((field) => {
+    return {
+      ...field,
+      values: values.filter((value) => value.field_id === field.id),
+    };
+  });
+
+  return {
+    types: types || [],
+    categories: categories || [],
+    filterFields,
+  };
+}
+
+function getAllowedDashboardStatus(status) {
+  const allowed = ["all", "pending", "published", "rejected", "delete_requested"];
+  return allowed.includes(status) ? status : "all";
+}
+
+async function getUserStatusCounts(userId) {
+  const rows = await db.all(
+    `
+    SELECT status, COUNT(*) AS total
+    FROM directories
+    WHERE owner_user_id = ?
+    GROUP BY status
+    `,
+    [userId]
+  );
+
+  const counts = {
+    all: 0,
+    pending: 0,
+    published: 0,
+    rejected: 0,
+    delete_requested: 0,
+  };
+
+  rows.forEach((row) => {
+    counts[row.status] = Number(row.total || 0);
+    counts.all += Number(row.total || 0);
+  });
+
+  return counts;
+}
+
+async function getSelectedFilterMap(directoryId) {
+  const selectedRows = await db.all(
+    "SELECT field_id, value_id FROM directory_filter_values WHERE directory_id = ?",
+    [directoryId]
+  );
+
+  const selectedMap = {};
+  selectedRows.forEach((row) => {
+    selectedMap[row.field_id] = row.value_id;
+  });
+
+  return selectedMap;
+}
+
+/* Register business user */
+app.get("/register-business", (req, res) => {
+  if (req.session.businessUser) return res.redirect("/dashboard");
+
+  res.render("business-auth/register", {
+    error: null,
+    form: {},
+  });
 });
-/* Login */
+
+app.post("/register-business", async (req, res) => {
+  try {
+    const { name, email, password, confirm_password } = req.body;
+
+    if (!name || !email || !password || !confirm_password) {
+      return res.render("business-auth/register", {
+        error: "Please fill all required fields.",
+        form: req.body,
+      });
+    }
+
+    if (password.length < 6) {
+      return res.render("business-auth/register", {
+        error: "Password must be at least 6 characters.",
+        form: req.body,
+      });
+    }
+
+    if (password !== confirm_password) {
+      return res.render("business-auth/register", {
+        error: "Passwords do not match.",
+        form: req.body,
+      });
+    }
+
+    const existingUser = await db.get(
+      "SELECT id FROM business_users WHERE email = ? LIMIT 1",
+      [email.trim()]
+    );
+
+    if (existingUser) {
+      return res.render("business-auth/register", {
+        error: "An account with this email already exists. Please login instead.",
+        form: req.body,
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const result = await db.run(
+      `
+      INSERT INTO business_users
+      (name, email, password_hash, status)
+      VALUES (?, ?, ?, ?)
+      `,
+      [name.trim(), email.trim().toLowerCase(), passwordHash, "active"]
+    );
+
+    req.session.businessUser = {
+      id: result.lastID,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+    };
+
+    res.redirect("/dashboard");
+  } catch (error) {
+    console.error("Business register error:", error);
+
+    res.render("business-auth/register", {
+      error: "Registration failed. Please try again.",
+      form: req.body,
+    });
+  }
+});
+
+/* Business user login */
 app.get("/login", (req, res) => {
-  res.redirect("/admin/login");
+  if (req.session.businessUser) return res.redirect("/dashboard");
+
+  res.render("business-auth/login", {
+    error: null,
+  });
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await db.get(
+      "SELECT * FROM business_users WHERE email = ? LIMIT 1",
+      [String(email || "").trim().toLowerCase()]
+    );
+
+    if (!user || user.status !== "active") {
+      return res.render("business-auth/login", {
+        error: "Invalid email or password.",
+      });
+    }
+
+    const passwordOk = await bcrypt.compare(password || "", user.password_hash);
+
+    if (!passwordOk) {
+      return res.render("business-auth/login", {
+        error: "Invalid email or password.",
+      });
+    }
+
+    req.session.businessUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    };
+
+    res.redirect("/dashboard");
+  } catch (error) {
+    console.error("Business login error:", error);
+
+    res.render("business-auth/login", {
+      error: "Login failed. Please try again.",
+    });
+  }
+});
+
+/* Business user logout */
+app.get("/logout", (req, res) => {
+  req.session.businessUser = null;
+  res.redirect("/login");
+});
+
+/* Business user dashboard */
+app.get("/dashboard", requireBusinessUser, async (req, res) => {
+  try {
+    const queryStatus = getAllowedDashboardStatus(req.query.status || "all");
+    const params = [req.session.businessUser.id];
+    let statusSql = "";
+
+    if (queryStatus !== "all") {
+      statusSql = "AND directories.status = ?";
+      params.push(queryStatus);
+    }
+
+    const businesses = await db.all(
+      `
+      SELECT
+        directories.*,
+        business_types.name AS business_type,
+        business_categories.name AS business_category
+      FROM directories
+      LEFT JOIN business_types ON business_types.id = directories.business_type_id
+      LEFT JOIN business_categories ON business_categories.id = directories.business_category_id
+      WHERE directories.owner_user_id = ?
+      ${statusSql}
+      ORDER BY directories.created_at DESC
+      `,
+      params
+    );
+
+    const statusCounts = await getUserStatusCounts(req.session.businessUser.id);
+
+    res.render("business-dashboard/dashboard", {
+      user: req.session.businessUser,
+      businesses,
+      statusCounts,
+      queryStatus,
+      statusLabel: businessStatusLabel,
+    });
+  } catch (error) {
+    console.error("User dashboard error:", error);
+    res.send("Error loading dashboard");
+  }
+});
+
+/* User profile */
+app.get("/dashboard/profile", requireBusinessUser, (req, res) => {
+  res.render("business-dashboard/profile", {
+    user: req.session.businessUser,
+    error: null,
+    success: null,
+  });
+});
+
+app.post("/dashboard/profile", requireBusinessUser, async (req, res) => {
+  try {
+    const { name, current_password, new_password, confirm_password } = req.body;
+    const user = await db.get("SELECT * FROM business_users WHERE id = ?", [req.session.businessUser.id]);
+
+    if (!user) return res.redirect("/logout");
+
+    if (new_password || confirm_password) {
+      if (!current_password) {
+        return res.render("business-dashboard/profile", {
+          user: req.session.businessUser,
+          error: "Current password is required to change password.",
+          success: null,
+        });
+      }
+
+      const passwordOk = await bcrypt.compare(current_password, user.password_hash);
+
+      if (!passwordOk) {
+        return res.render("business-dashboard/profile", {
+          user: req.session.businessUser,
+          error: "Current password is incorrect.",
+          success: null,
+        });
+      }
+
+      if (new_password !== confirm_password) {
+        return res.render("business-dashboard/profile", {
+          user: req.session.businessUser,
+          error: "New password and confirm password do not match.",
+          success: null,
+        });
+      }
+
+      const hash = await bcrypt.hash(new_password, 10);
+      await db.run("UPDATE business_users SET name = ?, password_hash = ? WHERE id = ?", [name, hash, user.id]);
+    } else {
+      await db.run("UPDATE business_users SET name = ? WHERE id = ?", [name, user.id]);
+    }
+
+    req.session.businessUser.name = name;
+
+    res.render("business-dashboard/profile", {
+      user: req.session.businessUser,
+      error: null,
+      success: "Profile updated successfully.",
+    });
+  } catch (error) {
+    console.error("Business profile update error:", error);
+    res.render("business-dashboard/profile", {
+      user: req.session.businessUser,
+      error: "Profile could not be updated.",
+      success: null,
+    });
+  }
+});
+
+/* Add business page */
+app.get("/dashboard/businesses/add", requireBusinessUser, async (req, res) => {
+  try {
+    const options = await loadBusinessFormOptions();
+
+    res.render("business-dashboard/add-business", {
+      ...options,
+      user: req.session.businessUser,
+      error: null,
+      form: {},
+      selectedMap: {},
+    });
+  } catch (error) {
+    console.error(error);
+    res.send("Error loading add business form");
+  }
+});
+
+/* Add business submit */
+app.post(
+  "/dashboard/businesses/add",
+  requireBusinessUser,
+  upload.single("logo_image"),
+  async (req, res) => {
+    try {
+      const {
+        business_name,
+        business_location,
+        business_type_id,
+        business_category_id,
+        founder_name,
+        established_year,
+        website_url,
+        contact_email,
+        phone_number,
+        social_link,
+        description,
+      } = req.body;
+
+      if (!business_name || !business_location || !business_type_id || !business_category_id || !description) {
+        const options = await loadBusinessFormOptions();
+
+        return res.render("business-dashboard/add-business", {
+          ...options,
+          user: req.session.businessUser,
+          error: "Please fill all required fields.",
+          form: req.body,
+          selectedMap: {},
+        });
+      }
+
+      const logoImage = req.file ? req.file.filename : null;
+
+      const result = await db.run(
+        `
+        INSERT INTO directories
+        (
+          business_name,
+          business_location,
+          business_type_id,
+          business_category_id,
+          founder_name,
+          logo_image,
+          established_year,
+          rating,
+          review_count,
+          description,
+          is_verified,
+          status,
+          scheduled_at,
+          website_url,
+          contact_email,
+          phone_number,
+          submitter_name,
+          submitter_email,
+          submitter_phone,
+          social_link,
+          owner_user_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          business_name.trim(),
+          business_location.trim(),
+          business_type_id,
+          business_category_id,
+          founder_name || null,
+          logoImage,
+          established_year || null,
+          0,
+          0,
+          description.trim(),
+          0,
+          "pending",
+          null,
+          website_url || null,
+          contact_email || null,
+          phone_number || null,
+          req.session.businessUser.name,
+          req.session.businessUser.email,
+          null,
+          social_link || null,
+          req.session.businessUser.id,
+        ]
+      );
+
+      const directoryId = result.lastID;
+      const filters = req.body.filters || {};
+      const selectedFilters = Object.entries(filters).filter(([fieldId, valueId]) => valueId);
+
+      for (const [fieldId, valueId] of selectedFilters) {
+        await db.run(
+          `
+          INSERT INTO directory_filter_values
+          (directory_id, field_id, value_id)
+          VALUES (?, ?, ?)
+          `,
+          [directoryId, fieldId, valueId]
+        );
+      }
+
+      res.redirect("/dashboard?status=pending");
+    } catch (error) {
+      console.error("Add user business error:", error);
+
+      const options = await loadBusinessFormOptions();
+
+      res.render("business-dashboard/add-business", {
+        ...options,
+        user: req.session.businessUser,
+        error: "Business could not be submitted.",
+        form: req.body,
+        selectedMap: {},
+      });
+    }
+  }
+);
+
+/* Edit user business page */
+app.get("/dashboard/businesses/:id/edit", requireBusinessUser, async (req, res) => {
+  try {
+    const business = await db.get(
+      `
+      SELECT *
+      FROM directories
+      WHERE id = ?
+      AND owner_user_id = ?
+      LIMIT 1
+      `,
+      [req.params.id, req.session.businessUser.id]
+    );
+
+    if (!business) {
+      return res.redirect("/dashboard");
+    }
+
+    const options = await loadBusinessFormOptions();
+    const selectedMap = await getSelectedFilterMap(req.params.id);
+
+    res.render("business-dashboard/edit-business", {
+      ...options,
+      user: req.session.businessUser,
+      business,
+      selectedMap,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Edit user business page error:", error);
+    res.send("Error loading edit page");
+  }
+});
+
+/* Edit user business submit */
+app.post(
+  "/dashboard/businesses/:id/edit",
+  requireBusinessUser,
+  upload.single("logo_image"),
+  async (req, res) => {
+    try {
+      const oldBusiness = await db.get(
+        `
+        SELECT *
+        FROM directories
+        WHERE id = ?
+        AND owner_user_id = ?
+        LIMIT 1
+        `,
+        [req.params.id, req.session.businessUser.id]
+      );
+
+      if (!oldBusiness) {
+        return res.redirect("/dashboard");
+      }
+
+      const logoImage = req.file ? req.file.filename : oldBusiness.logo_image;
+
+      await db.run(
+        `
+        UPDATE directories
+        SET
+          business_name = ?,
+          business_location = ?,
+          business_type_id = ?,
+          business_category_id = ?,
+          founder_name = ?,
+          logo_image = ?,
+          established_year = ?,
+          description = ?,
+          website_url = ?,
+          contact_email = ?,
+          phone_number = ?,
+          social_link = ?,
+          status = ?,
+          is_verified = ?,
+          admin_note = NULL,
+          updated_at = NOW()
+        WHERE id = ?
+        AND owner_user_id = ?
+        `,
+        [
+          req.body.business_name,
+          req.body.business_location,
+          req.body.business_type_id,
+          req.body.business_category_id,
+          req.body.founder_name || null,
+          logoImage,
+          req.body.established_year || null,
+          req.body.description,
+          req.body.website_url || null,
+          req.body.contact_email || null,
+          req.body.phone_number || null,
+          req.body.social_link || null,
+          "pending",
+          0,
+          req.params.id,
+          req.session.businessUser.id,
+        ]
+      );
+
+      await db.run(
+        "DELETE FROM directory_filter_values WHERE directory_id = ?",
+        [req.params.id]
+      );
+
+      const filters = req.body.filters || {};
+      const selectedFilters = Object.entries(filters).filter(([fieldId, valueId]) => valueId);
+
+      for (const [fieldId, valueId] of selectedFilters) {
+        await db.run(
+          `
+          INSERT INTO directory_filter_values
+          (directory_id, field_id, value_id)
+          VALUES (?, ?, ?)
+          `,
+          [req.params.id, fieldId, valueId]
+        );
+      }
+
+      res.redirect("/dashboard?status=pending");
+    } catch (error) {
+      console.error("Edit user business submit error:", error);
+      res.redirect("/dashboard");
+    }
+  }
+);
+
+/* User delete request */
+app.post("/dashboard/businesses/:id/delete-request", requireBusinessUser, async (req, res) => {
+  try {
+    await db.run(
+      `
+      UPDATE directories
+      SET status = 'delete_requested',
+          is_verified = 0,
+          updated_at = NOW()
+      WHERE id = ?
+      AND owner_user_id = ?
+      `,
+      [req.params.id, req.session.businessUser.id]
+    );
+
+    res.redirect("/dashboard?status=delete_requested");
+  } catch (error) {
+    console.error("Delete request error:", error);
+    res.redirect("/dashboard");
+  }
+});
+
+/* Admin approval routes */
+app.post("/admin/directories/:id/approve", requireAdmin, async (req, res) => {
+  await db.run(
+    `
+    UPDATE directories
+    SET status = 'published',
+        is_verified = 1,
+        admin_note = NULL,
+        updated_at = NOW()
+    WHERE id = ?
+    `,
+    [req.params.id]
+  );
+
+  res.redirect(req.get("Referrer") || "/admin/approvals");
+});
+
+app.post("/admin/directories/:id/reject", requireAdmin, async (req, res) => {
+  await db.run(
+    `
+    UPDATE directories
+    SET status = 'rejected',
+        is_verified = 0,
+        admin_note = ?,
+        updated_at = NOW()
+    WHERE id = ?
+    `,
+    [req.body.admin_note || "Not approved by admin.", req.params.id]
+  );
+
+  res.redirect(req.get("Referrer") || "/admin/approvals");
+});
+
+app.post("/admin/directories/:id/cancel-delete", requireAdmin, async (req, res) => {
+  await db.run(
+    `
+    UPDATE directories
+    SET status = 'published',
+        is_verified = 1,
+        admin_note = NULL,
+        updated_at = NOW()
+    WHERE id = ?
+    `,
+    [req.params.id]
+  );
+
+  res.redirect(req.get("Referrer") || "/admin/approvals");
+});
+
+app.post("/admin/directories/:id/delete", requireAdmin, async (req, res) => {
+  const row = await db.get("SELECT logo_image FROM directories WHERE id = ?", [req.params.id]);
+
+  await db.run("DELETE FROM directory_filter_values WHERE directory_id = ?", [req.params.id]);
+  await db.run("DELETE FROM directories WHERE id = ?", [req.params.id]);
+
+  if (row && row.logo_image) {
+    const filePath = path.join(__dirname, "public/uploads/logos", row.logo_image);
+    fs.unlink(filePath, () => {});
+  }
+
+  res.redirect(req.get("Referrer") || "/admin/directories");
 });
 app.get("/admin/login", (req, res) => {
   res.render("admin/login", { error: null });
@@ -622,14 +1284,23 @@ app.get("/admin/logout", (req, res) => {
 
 app.get("/admin/dashboard", requireAdmin, (req, res) => {
   db.get("SELECT COUNT(*) AS total FROM directories", [], (err, directoryCount) => {
-    db.get("SELECT COUNT(*) AS total FROM business_types", [], (err2, typeCount) => {
-      db.get("SELECT COUNT(*) AS total FROM business_categories", [], (err3, categoryCount) => {
-        res.render("admin/dashboard", {
-          admin: req.session.admin,
-          directoryCount: directoryCount ? directoryCount.total : 0,
-          typeCount: typeCount ? typeCount.total : 0,
-          categoryCount: categoryCount ? categoryCount.total : 0,
-          filterFields: res.locals.sidebarFields || [],
+    db.get("SELECT COUNT(*) AS total FROM directories WHERE status = 'pending'", [], (pendingErr, pendingCount) => {
+      db.get("SELECT COUNT(*) AS total FROM directories WHERE status = 'rejected'", [], (rejectedErr, rejectedCount) => {
+        db.get("SELECT COUNT(*) AS total FROM directories WHERE status = 'delete_requested'", [], (deleteErr, deleteCount) => {
+          db.get("SELECT COUNT(*) AS total FROM business_types", [], (err2, typeCount) => {
+            db.get("SELECT COUNT(*) AS total FROM business_categories", [], (err3, categoryCount) => {
+              res.render("admin/dashboard", {
+                admin: req.session.admin,
+                directoryCount: directoryCount ? directoryCount.total : 0,
+                pendingCount: pendingCount ? pendingCount.total : 0,
+                rejectedCount: rejectedCount ? rejectedCount.total : 0,
+                deleteRequestCount: deleteCount ? deleteCount.total : 0,
+                typeCount: typeCount ? typeCount.total : 0,
+                categoryCount: categoryCount ? categoryCount.total : 0,
+                filterFields: res.locals.sidebarFields || [],
+              });
+            });
+          });
         });
       });
     });
@@ -840,6 +1511,10 @@ app.post("/admin/directories/add", requireAdmin, upload.single("logo_image"), (r
     review_count,
     description,
     is_verified,
+    website_url,
+    contact_email,
+    phone_number,
+    social_link,
     save_action,
     scheduled_at,
   } = req.body;
@@ -865,8 +1540,8 @@ app.post("/admin/directories/add", requireAdmin, upload.single("logo_image"), (r
   db.run(
     `
     INSERT INTO directories
-    (business_name, business_location, business_type_id, business_category_id, founder_name, logo_image, established_year, rating, review_count, description, is_verified, status, scheduled_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (business_name, business_location, business_type_id, business_category_id, founder_name, logo_image, established_year, rating, review_count, description, is_verified, status, scheduled_at, website_url, contact_email, phone_number, social_link)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       business_name,
@@ -882,6 +1557,10 @@ app.post("/admin/directories/add", requireAdmin, upload.single("logo_image"), (r
       is_verified ? 1 : 0,
       status,
       finalScheduledAt,
+      website_url || null,
+      contact_email || null,
+      phone_number || null,
+      social_link || null,
     ],
     function (err) {
       if (err) {
@@ -1249,7 +1928,22 @@ app.post(
 );
 /* All Directories Admin */
 
-app.get("/admin/directories", requireAdmin, (req, res) => {
+function loadAdminDirectoryList(statusFilter, viewMode, res) {
+  const where = [];
+  const params = [];
+
+  if (statusFilter && statusFilter !== "all") {
+    if (Array.isArray(statusFilter)) {
+      where.push(`directories.status IN (${statusFilter.map(() => "?").join(",")})`);
+      params.push(...statusFilter);
+    } else {
+      where.push("directories.status = ?");
+      params.push(statusFilter);
+    }
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
   db.all("SELECT * FROM filter_fields ORDER BY id ASC", [], (fieldErr, filterFields) => {
     if (fieldErr) return res.send("Error loading filter fields");
 
@@ -1258,13 +1952,17 @@ app.get("/admin/directories", requireAdmin, (req, res) => {
       SELECT
         directories.*,
         business_types.name AS business_type,
-        business_categories.name AS business_category
+        business_categories.name AS business_category,
+        business_users.name AS owner_name,
+        business_users.email AS owner_email
       FROM directories
       LEFT JOIN business_types ON directories.business_type_id = business_types.id
       LEFT JOIN business_categories ON directories.business_category_id = business_categories.id
+      LEFT JOIN business_users ON directories.owner_user_id = business_users.id
+      ${whereSql}
       ORDER BY directories.id DESC
       `,
-      [],
+      params,
       (dirErr, directories) => {
         if (dirErr) return res.send("Error loading directories");
 
@@ -1287,16 +1985,36 @@ app.get("/admin/directories", requireAdmin, (req, res) => {
               filterMap[`${row.directory_id}_${row.field_id}`] = row.value;
             });
 
+            const pageMeta = {
+              all: { title: "All Directories", subtitle: "Manage every listing in one place." },
+              approvals: { title: "Business Approvals", subtitle: "Review pending listings and delete requests from business users." },
+              rejected: { title: "Not Approved", subtitle: "Review businesses rejected by admin." },
+            };
+
             res.render("admin/directories", {
               directories,
               filterFields: filterFields || [],
               filterMap,
+              viewMode: viewMode || "all",
+              pageMeta: pageMeta[viewMode || "all"] || pageMeta.all,
             });
           }
         );
       }
     );
   });
+}
+
+app.get("/admin/directories", requireAdmin, (req, res) => {
+  loadAdminDirectoryList("all", "all", res);
+});
+
+app.get("/admin/approvals", requireAdmin, (req, res) => {
+  loadAdminDirectoryList(["pending", "delete_requested"], "approvals", res);
+});
+
+app.get("/admin/not-approved", requireAdmin, (req, res) => {
+  loadAdminDirectoryList("rejected", "rejected", res);
 });
 /* Edit / Delete Directory */
 
@@ -1357,6 +2075,10 @@ app.post("/admin/directories/edit/:id", requireAdmin, upload.single("logo_image"
     review_count,
     description,
     is_verified,
+    website_url,
+    contact_email,
+    phone_number,
+    social_link,
     save_action,
     scheduled_at,
     old_logo,
@@ -1395,7 +2117,12 @@ app.post("/admin/directories/edit/:id", requireAdmin, upload.single("logo_image"
         description = ?,
         is_verified = ?,
         status = ?,
-        scheduled_at = ?
+        scheduled_at = ?,
+        website_url = ?,
+        contact_email = ?,
+        phone_number = ?,
+        social_link = ?,
+        updated_at = NOW()
     WHERE id = ?
     `,
     [
@@ -1412,6 +2139,10 @@ app.post("/admin/directories/edit/:id", requireAdmin, upload.single("logo_image"
       is_verified ? 1 : 0,
       status,
       finalScheduledAt,
+      website_url || null,
+      contact_email || null,
+      phone_number || null,
+      social_link || null,
       directoryId,
     ],
     function (err) {

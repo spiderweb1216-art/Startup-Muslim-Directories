@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Business | Startup Muslim</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/business-dashboard.css">
+</head>
+<body>
+<% const business = typeof form !== 'undefined' ? form : {}; const safeSelectedMap = typeof selectedMap !== 'undefined' ? selectedMap : {}; %>
+<div class="user-shell">
+  <%- include("partials/sidebar") %>
+  <main class="user-main">
+    <header class="user-topbar">
+      <div>
+        <h1>Add Business</h1>
+        <p class="user-topbar-sub">Create a new business listing for admin approval.</p>
+      </div>
+      <div class="user-top-actions"><a class="user-btn light" href="/dashboard">Back to Dashboard</a></div>
+    </header>
+    <section class="user-content">
+      <div class="panel">
+        <div class="panel-head"><div><h2>Add Business</h2><p>Submit your listing for admin approval. It will not appear publicly until approved.</p></div></div>
+        <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+        <form method="POST" action="/dashboard/businesses/add" enctype="multipart/form-data">
+        <div class="form-section">Business Information</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Business Name *</label><input type="text" name="business_name" value="<%= business.business_name || '' %>" required></div>
+          <div class="form-group"><label>Founder Name</label><input type="text" name="founder_name" value="<%= business.founder_name || '' %>"></div>
+          <div class="form-group"><label>Business Type *</label><select name="business_type_id" required><option value="">Select Type</option><% types.forEach(function(type) { %><option value="<%= type.id %>" <%= String(business.business_type_id || '') === String(type.id) ? 'selected' : '' %>><%= type.name %></option><% }) %></select></div>
+          <div class="form-group"><label>Business Category *</label><select name="business_category_id" required><option value="">Select Category</option><% categories.forEach(function(category) { %><option value="<%= category.id %>" <%= String(business.business_category_id || '') === String(category.id) ? 'selected' : '' %>><%= category.name %></option><% }) %></select></div>
+          <div class="form-group"><label>Location *</label><input type="text" name="business_location" value="<%= business.business_location || '' %>" required></div>
+          <div class="form-group"><label>Established Year</label><input type="number" name="established_year" value="<%= business.established_year || '' %>" min="1800" max="2100"></div>
+          <div class="form-group"><label>Website URL</label><input type="url" name="website_url" value="<%= business.website_url || '' %>"></div>
+          <div class="form-group"><label>Business Email</label><input type="email" name="contact_email" value="<%= business.contact_email || '' %>"></div>
+          <div class="form-group"><label>Phone / WhatsApp</label><input type="text" name="phone_number" value="<%= business.phone_number || '' %>"></div>
+          <div class="form-group"><label>Social Link</label><input type="url" name="social_link" value="<%= business.social_link || '' %>"></div>
+          <div class="form-group full"><label>Logo</label><input type="file" name="logo_image" accept="image/*"><div class="help-text">Optional. Recommended square or landscape logo.</div><% if (business.logo_image) { %><img class="current-logo" src="/uploads/logos/<%= business.logo_image %>" alt="Current logo"><% } %></div>
+          <div class="form-group full"><label>Description *</label><textarea name="description" required><%= business.description || '' %></textarea></div>
+        </div>
+
+        <% if (filterFields && filterFields.length > 0) { %>
+          <div class="form-section">Additional Details</div>
+          <div class="form-grid">
+            <% filterFields.forEach(function(field) { %>
+              <% if (field.values && field.values.length > 0) { %>
+                <div class="form-group"><label><%= field.name %></label><select name="filters[<%= field.id %>]"><option value="">Select <%= field.name %></option><% field.values.forEach(function(value) { %><option value="<%= value.id %>" <%= String(safeSelectedMap[field.id] || '') === String(value.id) ? 'selected' : '' %>><%= value.value %></option><% }) %></select></div>
+              <% } %>
+            <% }) %>
+          </div>
+        <% } %>
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:26px;">
+            <button class="user-btn" type="submit">Submit for Approval</button>
+            <a class="user-btn light" href="/dashboard">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

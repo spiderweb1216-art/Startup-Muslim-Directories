@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Profile Settings | Startup Muslim</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/business-dashboard.css">
+</head>
+<body>
+<div class="user-shell">
+  <%- include("partials/sidebar") %>
+  <main class="user-main">
+    <header class="user-topbar">
+      <div>
+        <h1>Profile Settings</h1>
+        <p class="user-topbar-sub">Update your name or change your password.</p>
+      </div>
+      <div class="user-top-actions"><span class="user-chip"><%= user.email %></span></div>
+    </header>
+    <section class="user-content">
+      <div class="panel" style="max-width:780px;">
+        <div class="panel-head"><div><h2>Your Account</h2><p>Update your name or change your dashboard password.</p></div></div>
+        <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+        <% if (success) { %><div class="alert alert-success"><%= success %></div><% } %>
+        <form method="POST" action="/dashboard/profile">
+          <div class="form-grid">
+            <div class="form-group full"><label>Name</label><input type="text" name="name" value="<%= user.name %>" required></div>
+            <div class="form-group full"><label>Email</label><input type="email" value="<%= user.email %>" disabled><div class="help-text">Email cannot be changed from this dashboard.</div></div>
+          </div>
+          <div class="form-section">Change Password</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Current Password</label><input type="password" name="current_password"></div>
+            <div></div>
+            <div class="form-group"><label>New Password</label><input type="password" name="new_password"></div>
+            <div class="form-group"><label>Confirm New Password</label><input type="password" name="confirm_password"></div>
+          </div>
+          <button class="user-btn" type="submit" style="margin-top:24px;">Update Profile</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

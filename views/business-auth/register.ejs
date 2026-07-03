@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Register Your Business | Startup Muslim</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/business-dashboard.css">
+</head>
+<body>
+  <main class="auth-page">
+    <section class="auth-brand-panel">
+      <div>
+        <a class="auth-logo" href="/directories">
+          <img src="/uploads/sm-logo.webp" alt="Startup Muslim Logo">
+        </a>
+        <h1>Register your business with Startup Muslim.</h1>
+        <p>Create your owner account, submit your business, and track approval status from a professional branded dashboard.</p>
+      </div>
+      <p>All submitted businesses are reviewed by admin before appearing on the website.</p>
+    </section>
+
+    <section class="auth-card-wrap">
+      <div class="auth-card">
+        <h2>Create account</h2>
+        <p>Use this account to manage your business listings.</p>
+
+        <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+        <form method="POST" action="/register-business">
+          <label>Your Name</label>
+          <input type="text" name="name" value="<%= form.name || '' %>" required>
+
+          <label>Email Address</label>
+          <input type="email" name="email" value="<%= form.email || '' %>" required>
+
+          <label>Password</label>
+          <input type="password" name="password" required>
+
+          <label>Confirm Password</label>
+          <input type="password" name="confirm_password" required>
+
+          <button class="user-btn" style="width:100%; margin-top:20px;" type="submit">Create Business Account</button>
+        </form>
+
+        <div class="auth-link">Already have an account? <a href="/login">Login here</a></div>
+        <div class="auth-link">Admin? <a href="/admin/login">Go to admin login</a></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

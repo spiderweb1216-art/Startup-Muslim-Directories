@@ -1,34 +1,24 @@
 <aside class="sidebar">
-  <div class="brand">Startup Muslim</div>
-
+  <div class="brand admin-brand-logo">
+    <img src="/uploads/sm-logo.webp" alt="Startup Muslim Logo">
+    <span>Admin Portal</span>
+  </div>
   <nav class="menu">
     <a class="<%= currentPath === '/admin/dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
-
+    <a class="<%= currentPath === '/admin/approvals' ? 'active' : '' %>" href="/admin/approvals">Business Approvals</a>
+    <a class="<%= currentPath === '/admin/not-approved' ? 'active' : '' %>" href="/admin/not-approved">Not Approved</a>
     <a class="<%= currentPath === '/admin/directories' ? 'active' : '' %>" href="/admin/directories">All Directories</a>
-
     <a class="<%= currentPath === '/admin/directories/add' ? 'active' : '' %>" href="/admin/directories/add">Add Directory</a>
-
+    <a class="<%= currentPath === '/admin/directories/import' ? 'active' : '' %>" href="/admin/directories/import">Import CSV</a>
     <a class="<%= currentPath === '/admin/business-types' ? 'active' : '' %>" href="/admin/business-types">Business Types</a>
-
     <a class="<%= currentPath === '/admin/business-categories' ? 'active' : '' %>" href="/admin/business-categories">Business Categories</a>
-
     <% sidebarFields.forEach(function(field) { %>
-      <a 
-        class="<%= currentPath === '/admin/filter-fields/' + field.id + '/values' ? 'active' : '' %>" 
-        href="/admin/filter-fields/<%= field.id %>/values"
-      >
-        <%= field.name %>
-      </a>
+      <a class="<%= currentPath === '/admin/filter-fields/' + field.id + '/values' ? 'active' : '' %>" href="/admin/filter-fields/<%= field.id %>/values"><%= field.name %></a>
     <% }) %>
-
     <a class="<%= currentPath === '/admin/filter-fields' ? 'active' : '' %>" href="/admin/filter-fields">Add New Field</a>
-
-    <a class="<%= currentPath === '/admin/users' ? 'active' : '' %>" href="/admin/users">Users</a>
-
+    <a class="<%= currentPath === '/admin/users' ? 'active' : '' %>" href="/admin/users">Admin Users</a>
     <a class="<%= currentPath === '/admin/account' ? 'active' : '' %>" href="/admin/account">Account Settings</a>
-
     <a href="/directories" target="_blank">View Website</a>
-
     <a href="/admin/logout">Logout</a>
   </nav>
 </aside>

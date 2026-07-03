@@ -165,6 +165,26 @@
             </div>
 
             <div>
+              <label>Website URL</label>
+              <input type="url" name="website_url" value="<%= directory.website_url || '' %>">
+            </div>
+
+            <div>
+              <label>Business Email</label>
+              <input type="email" name="contact_email" value="<%= directory.contact_email || '' %>">
+            </div>
+
+            <div>
+              <label>Phone / WhatsApp</label>
+              <input type="text" name="phone_number" value="<%= directory.phone_number || '' %>">
+            </div>
+
+            <div>
+              <label>Social Link</label>
+              <input type="url" name="social_link" value="<%= directory.social_link || '' %>">
+            </div>
+
+            <div>
               <label>Verified Business</label>
               <select name="is_verified">
                 <option value="1" <%= directory.is_verified != 0 ? "selected" : "" %>>Verified</option>

@@ -2,14 +2,6 @@ const mysql = require("mysql2/promise");
 const dotenv = require("dotenv");
 
 dotenv.config();
-console.log("DB ENV CHECK:", {
-  DB_HOST: process.env.DB_HOST,
-  DB_PORT: process.env.DB_PORT,
-  DB_NAME: process.env.DB_NAME,
-  DB_USER: process.env.DB_USER,
-  DB_PASSWORD_SET: process.env.DB_PASSWORD ? "YES" : "NO",
-});
-
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
   port: Number(process.env.DB_PORT || 3306),
@@ -21,7 +13,24 @@ const pool = mysql.createPool({
   queueLimit: 0,
   charset: "utf8mb4",
 });
+async function addColumnIfMissing(connection, tableName, columnName, columnDefinition) {
+  const [rows] = await connection.query(
+    `
+    SELECT COUNT(*) AS count
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = ?
+    AND COLUMN_NAME = ?
+    `,
+    [tableName, columnName]
+  );
 
+  if (rows[0].count === 0) {
+    await connection.query(
+      `ALTER TABLE \`${tableName}\` ADD COLUMN ${columnDefinition}`
+    );
+  }
+}
 async function initDatabase() {
   const connection = await pool.getConnection();
 
@@ -121,7 +130,37 @@ async function initDatabase() {
         INDEX idx_dfv_field_value (field_id, value_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+await connection.query(`
+  CREATE TABLE IF NOT EXISTS business_users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+`);
 
+await addColumnIfMissing(
+  connection,
+  "directories",
+  "owner_user_id",
+  "owner_user_id INT NULL"
+);
+
+await addColumnIfMissing(
+  connection,
+  "directories",
+  "admin_note",
+  "admin_note TEXT NULL"
+);
+
+await addColumnIfMissing(
+  connection,
+  "directories",
+  "updated_at",
+  "updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP"
+);
     console.log("MySQL database connected and tables ready");
   } catch (error) {
     console.error("MySQL database setup failed:", error.message);

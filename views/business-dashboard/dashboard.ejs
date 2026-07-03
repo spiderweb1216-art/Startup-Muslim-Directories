@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Business Dashboard | Startup Muslim</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/business-dashboard.css">
+</head>
+<body>
+<div class="user-shell">
+  <%- include("partials/sidebar") %>
+
+  <main class="user-main">
+    <header class="user-topbar">
+      <div>
+        <h1>Business Dashboard</h1>
+        <p class="user-topbar-sub">Manage submissions, approval status, edits, and delete requests.</p>
+      </div>
+      <div class="user-top-actions">
+        <span class="user-chip"><%= user.name %></span>
+        <a class="user-btn light" href="/directories" target="_blank">View Website</a>
+        <a class="user-btn" href="/dashboard/businesses/add">Add Business</a>
+      </div>
+    </header>
+
+    <section class="user-content">
+      <div class="hero-panel">
+        <h2>Manage your Startup Muslim business listings.</h2>
+        <p>Submit new businesses, update details, request deletion, and track admin approval. Listings only appear publicly after admin approval.</p>
+        <div class="hero-actions">
+          <a class="user-btn light" href="/dashboard/businesses/add">Add New Business</a>
+          <a class="user-btn dark" href="/dashboard?status=pending">View Pending</a>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card"><strong><%= statusCounts.all || 0 %></strong><span>Total Listings</span></div>
+        <div class="stat-card"><strong><%= statusCounts.pending || 0 %></strong><span>Pending Approval</span></div>
+        <div class="stat-card"><strong><%= statusCounts.published || 0 %></strong><span>Approved & Live</span></div>
+        <div class="stat-card"><strong><%= statusCounts.rejected || 0 %></strong><span>Not Approved</span></div>
+        <div class="stat-card"><strong><%= statusCounts.delete_requested || 0 %></strong><span>Delete Requests</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2><%= queryStatus === 'all' ? 'My Businesses' : statusLabel(queryStatus) %></h2>
+            <p>New submissions and edits are saved as pending until the admin approves them.</p>
+          </div>
+          <a class="user-btn" href="/dashboard/businesses/add">Add New</a>
+        </div>
+
+        <% if (!businesses || businesses.length === 0) { %>
+          <div class="empty-state">
+            <h3>No listings found</h3>
+            <p>There are no businesses in this section yet.</p>
+            <a class="user-btn" href="/dashboard/businesses/add">Submit Your First Business</a>
+          </div>
+        <% } %>
+
+        <div class="business-list">
+          <% businesses.forEach(function(item) { %>
+            <article class="business-item">
+              <div class="business-logo">
+                <% if (item.logo_image) { %>
+                  <img src="/uploads/logos/<%= item.logo_image %>" alt="<%= item.business_name %> logo">
+                <% } else { %>
+                  No Logo
+                <% } %>
+              </div>
+
+              <div class="business-info">
+                <h3><%= item.business_name %></h3>
+                <div class="business-meta">
+                  <span><%= item.business_category || 'Category not set' %></span>
+                  <span>•</span>
+                  <span><%= item.business_type || 'Type not set' %></span>
+                  <span>•</span>
+                  <span><%= item.business_location || 'Location not set' %></span>
+                </div>
+                <div style="margin-top:10px;">
+                  <span class="status-badge <%= item.status || 'pending' %>"><%= statusLabel(item.status) %></span>
+                </div>
+                <% if (item.admin_note) { %>
+                  <p class="business-desc"><strong>Admin note:</strong> <%= item.admin_note %></p>
+                <% } else if (item.description) { %>
+                  <p class="business-desc"><%= item.description.substring(0, 170) %><%= item.description.length > 170 ? '...' : '' %></p>
+                <% } %>
+              </div>
+
+              <div class="item-actions">
+                <a class="user-btn light" href="/dashboard/businesses/<%= item.id %>/edit">Edit</a>
+                <% if (item.status !== 'delete_requested') { %>
+                  <form class="mini-form" method="POST" action="/dashboard/businesses/<%= item.id %>/delete-request" onsubmit="return confirm('Send delete request to admin?')">
+                    <button class="user-btn danger" type="submit">Request Delete</button>
+                  </form>
+                <% } %>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

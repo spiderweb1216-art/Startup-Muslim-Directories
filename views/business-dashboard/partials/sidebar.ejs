@@ -1,0 +1,69 @@
+<%
+  const safeCurrentPath = typeof currentPath !== "undefined" ? currentPath : "";
+  const safeQueryStatus = typeof queryStatus !== "undefined" ? queryStatus : "all";
+  const safeStatusCounts = typeof statusCounts !== "undefined"
+    ? statusCounts
+    : { all: 0, pending: 0, published: 0, rejected: 0, delete_requested: 0 };
+%>
+<aside class="user-sidebar">
+  <div class="user-brand">
+    <a class="user-brand-logo" href="/dashboard" aria-label="Startup Muslim dashboard">
+      <img src="/uploads/sm-logo.webp" alt="Startup Muslim Logo">
+    </a>
+    <div class="user-brand-text">
+      <strong>Startup Muslim</strong>
+      <span>Business Owner Portal</span>
+    </div>
+  </div>
+
+  <nav class="user-menu">
+    <div class="user-menu-title">Workspace</div>
+
+    <a class="<%= safeCurrentPath === '/dashboard' && safeQueryStatus === 'all' ? 'active' : '' %>" href="/dashboard">
+      <span>All Businesses</span>
+      <span class="user-count"><%= safeStatusCounts.all || 0 %></span>
+    </a>
+
+    <a class="<%= safeCurrentPath === '/dashboard' && safeQueryStatus === 'pending' ? 'active' : '' %>" href="/dashboard?status=pending">
+      <span>Pending Approval</span>
+      <span class="user-count"><%= safeStatusCounts.pending || 0 %></span>
+    </a>
+
+    <a class="<%= safeCurrentPath === '/dashboard' && safeQueryStatus === 'published' ? 'active' : '' %>" href="/dashboard?status=published">
+      <span>Approved / Live</span>
+      <span class="user-count"><%= safeStatusCounts.published || 0 %></span>
+    </a>
+
+    <a class="<%= safeCurrentPath === '/dashboard' && safeQueryStatus === 'rejected' ? 'active' : '' %>" href="/dashboard?status=rejected">
+      <span>Not Approved</span>
+      <span class="user-count"><%= safeStatusCounts.rejected || 0 %></span>
+    </a>
+
+    <a class="<%= safeCurrentPath === '/dashboard' && safeQueryStatus === 'delete_requested' ? 'active' : '' %>" href="/dashboard?status=delete_requested">
+      <span>Delete Requests</span>
+      <span class="user-count"><%= safeStatusCounts.delete_requested || 0 %></span>
+    </a>
+
+    <div class="user-menu-title">Actions</div>
+
+    <a class="<%= safeCurrentPath === '/dashboard/businesses/add' ? 'active' : '' %>" href="/dashboard/businesses/add">
+      <span>Add New Business</span>
+    </a>
+
+    <a class="<%= safeCurrentPath === '/dashboard/profile' ? 'active' : '' %>" href="/dashboard/profile">
+      <span>Profile Settings</span>
+    </a>
+
+    <a href="/directories" target="_blank">
+      <span>View Website</span>
+    </a>
+
+    <a href="/logout">
+      <span>Logout</span>
+    </a>
+  </nav>
+
+  <div class="user-sidebar-footer">
+    Every new listing and every edit goes to admin approval before it becomes visible on the public website.
+  </div>
+</aside>
